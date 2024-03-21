@@ -1,24 +1,54 @@
 from flask import Flask, request, jsonify
-import requests
+from inference_sdk import InferenceHTTPClient
+import base64
+
+# Initialiser l'objet InferenceHTTPClient pour les chiens
+CLIENT_DOG = InferenceHTTPClient(
+    api_url="https://outline.roboflow.com",
+    api_key="QHL5psNHyJiFsvWBeMeo"
+)
+
+# Initialiser l'objet InferenceHTTPClient pour les chats
+CLIENT_CAT = InferenceHTTPClient(
+    api_url="https://detect.roboflow.com",
+    api_key="QHL5psNHyJiFsvWBeMeo"
+)
 
 app = Flask(__name__)
 
-@app.route('/infer-dog-breed', methods=['POST'])
+# Définir l'endpoint pour effectuer l'inférence pour les chiens
+@app.route('/infer-dog', methods=['POST'])
 def infer_dog_breed():
-    # Obtenir l'image depuis la requête Flutter
-    image_data = request.data
+    try:
+        # Récupérer les données d'image encodées en base64 depuis la requête
+        image_data = request.json.get('image')
+        if not image_data:
+            return jsonify({'error': 'Image data not provided'}), 400
 
-    # Appeler l'API de Roboflow pour effectuer l'inférence
-    roboflow_api_url = 'https://outline.roboflow.com/dog-breed-identifier-nc37x/1'
-    api_key = 'QHL5psNHyJiFsvWBeMeo'
-    headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/x-www-form-urlencoded'}
-    response = requests.post(roboflow_api_url, headers=headers, data=image_data)
+        # Appeler la méthode infer de l'objet InferenceHTTPClient pour les chiens
+        result_dog = CLIENT_DOG.infer(image_data, model_id="dog-breed-identifier-nc37x/1")
 
-    if response.status_code == 200:
-        # Renvoyer les résultats d'inférence à Flutter
-        return jsonify(response.json())
-    else:
-        return jsonify({'error': 'Failed to perform inference'}), 500
+        # Renvoyer les résultats d'inférence pour les chiens au client
+        return jsonify(result_dog)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Définir l'endpoint pour effectuer l'inférence pour les chats
+@app.route('/infer-cat', methods=['POST'])
+def infer_cat_breed():
+    try:
+        # Récupérer les données d'image encodées en base64 depuis la requête
+        image_data = request.json.get('image')
+        if not image_data:
+            return jsonify({'error': 'Image data not provided'}), 400
+
+        # Appeler la méthode infer de l'objet InferenceHTTPClient pour les chats
+        result_cat = CLIENT_CAT.infer(image_data, model_id="cat-breeds-2n7zk/1")
+
+        # Renvoyer les résultats d'inférence pour les chats au client
+        return jsonify(result_cat)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
